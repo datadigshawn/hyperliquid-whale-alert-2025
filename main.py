@@ -4,6 +4,8 @@ from datetime import datetime
 from hyperliquid.info import Info
 from hyperliquid.utils import constants
 import requests
+import signal
+import sys
 
 # 環境變數
 WALLET = os.getenv("TARGET_WALLET", "0xb317d2bc2d3d2df5fa441b5bae0ab9d8b07283ae")
@@ -40,6 +42,25 @@ def format_time():
     return datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
 
+# 全域變數用於優雅關閉
+total_alerts = 0
+
+
+def signal_handler(sig, frame):
+    """處理關閉信號"""
+    shutdown_msg = (
+        f"🛑 <b>監控服務已停止</b>\n\n"
+        f"⏰ 停止時間：{format_time()}\n"
+        f"📈 總共推播：<b>{total_alerts}</b> 則訊息"
+    )
+    send_telegram(shutdown_msg)
+    print("\n👋 監控已停止")
+    sys.exit(0)
+
+
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
 # 啟動訊息
 startup_msg = (
     f"🦈 <b>雲端鯨魚雷達已啟動！</b>\n\n"
@@ -52,7 +73,6 @@ send_telegram(startup_msg)
 # 初始化
 last_orders = {}
 last_heartbeat = time.time()
-total_alerts = 0
 
 print(f"✅ 監控已啟動 | 目標錢包：{WALLET}")
 
@@ -122,3 +142,35 @@ while True:
                         f"成交：<b>{abs(old_sz - new_sz):,.0f}</b> 張\n"
                         f"時間：{format_time()}"
                     )
+                    alerts.append(msg)
+                    send_telegram(msg)
+
+        # 記錄偵測到的變化
+        if alerts:
+            total_alerts += len(alerts)
+            print(f"{format_time()} | 偵測到 {len(alerts)} 個變化 | 累計：{total_alerts}")
+
+        # 每小時心跳訊息
+        if time.time() - last_heartbeat > 3600:
+            heartbeat_msg = (
+                f"💚 <b>系統運行正常</b>\n\n"
+                f"⏰ 時間：{format_time()}\n"
+                f"📊 目前監控：<b>{len(current)}</b> 個掛單\n"
+                f"📈 累計推播：<b>{total_alerts}</b> 則訊息\n"
+                f"✅ 狀態：正常運行中"
+            )
+            send_telegram(heartbeat_msg)
+            last_heartbeat = time.time()
+            print(f"💚 已發送心跳訊息")
+
+        # 更新訂單快照
+        last_orders = current
+
+        # 等待 15 秒
+        time.sleep(15)
+
+    except Exception as e:
+        error_msg = f"⚠️ <b>監控錯誤</b>\n\n錯誤訊息：<code>{str(e)}</code>\n時間：{format_time()}"
+        send_telegram(error_msg)
+        print(f"❌ 錯誤：{e}")
+        time.sleep(30)
