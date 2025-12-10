@@ -25,7 +25,7 @@ def send_telegram(msg):
         print(f"推播錯誤：{e}")
 
 # 啟動訊息
-send_telegram("🦈 雲端鯨魚雷達已啟動！\n監控地址：{WALLET}\n每 15 秒檢查一次訂單變化")
+send_telegram(f"🦈 雲端鯨魚雷達已啟動！\n監控地址：{WALLET}\n每 15 秒檢查一次訂單變化")
 
 last_orders = {}
 
