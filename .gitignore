@@ -1,0 +1,23 @@
+# 機密（.env 含 Telegram token）
+.env
+.env.bak
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Logs
+*.log
+*.error.log
+
+# macOS
+.DS_Store
+
+# 舊版本程式（開發時用）
+temop/
+
+# Editor
+.vscode/
+.idea/
